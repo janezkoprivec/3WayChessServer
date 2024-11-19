@@ -1,29 +1,35 @@
 import express, { Express, Request, Response } from "express";
-import socketIO from "socket.io";
 import dotenv from "dotenv";
-import cors from 'cors';
+import cors from "cors";
+import startSocketServer from "./routes/sockets";
+import initMongoose from "./models/db";
 
-dotenv.config();
+async function main() {
+  // Load environment variables first
+  dotenv.config();
 
-const app: Express = express();
-app.use(cors());
-const port = process.env.PORT || 3000;
+  // Then initialize database
 
-const server = app.listen(port, () => {
-  console.log(`[server]: Server is running at http://localhost:${port}`);
-});
+  const mongoose = await initMongoose();
+  require("./models/db-models");
 
-const io = new socketIO.Server(server, {
-  cors: {
-    origin: "*",
-    methods: ["GET", "POST"]
-  }
-});
+  const app: Express = express();
+  app.use(
+    cors({
+      origin: "*",
+    })
+  );
+  const port = process.env.PORT || 3000;
 
-app.get("/", (req: Request, res: Response) => {
-  res.send("Express + TypeScript Server");
-});
+  const server = app.listen(port, () => {
+    console.log(`[server]: Server is running at http://localhost:${port}`);
+  });
 
-io.on("connection", (socket) => {
-  console.log("a user connected");
-});
+  startSocketServer(server, mongoose);
+
+  app.get("/", (req: Request, res: Response) => {
+    res.send("Express + TypeScript Server");
+  });
+}
+
+main();
