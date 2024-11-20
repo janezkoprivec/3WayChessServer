@@ -14,7 +14,7 @@ async function seedDatabase() {
 
       // Clear existing data
       console.log("Clearing existing data...");
-      await Promise.all([Player.deleteMany({}), Game.deleteMany({})]);
+      await Promise.all([Player.deleteMany({}), Game.deleteMany({}), User.deleteMany({})]);
       console.log("Existing data cleared.");
 
       // Create test users
@@ -60,9 +60,9 @@ async function seedDatabase() {
         );
 
         const timeControls = [
-          { type: "bullet", time: 180, increment: 0 },
-          { type: "blitz", time: 300, increment: 2 },
-          { type: "rapid", time: 600, increment: 5 },
+          { type: "bullet", time: 3, increment: 0 },
+          { type: "blitz", time: 5, increment: 2 },
+          { type: "rapid", time: 10, increment: 5 },
         ] as const;
 
         const randomTimeControl =

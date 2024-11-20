@@ -4,6 +4,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 export interface IUser extends Document {
   id: string;
   username: string;
+  profilePictureUrl?: string;
 }
 
 export interface IPlayer extends Document {
@@ -27,7 +28,8 @@ export interface IGame extends Document {
 
 // User Schema
 const UserSchema = new Schema({
-  username: { type: String, required: true, unique: true }
+  username: { type: String, required: true, unique: true },
+  profilePictureUrl: { type: String, required: false }
 }, {
   timestamps: true
 });
