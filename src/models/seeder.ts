@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { User, Player, Game, IPlayer } from "./db-models";
+import { Player, Game, IPlayer, User } from "./db-models";
 import dotenv from "dotenv";
 
 dotenv.config();

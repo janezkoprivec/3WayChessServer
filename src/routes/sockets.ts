@@ -2,7 +2,7 @@ import socketIO from "socket.io";
 import { Server } from "http";
 import { Game } from "../models/db-models";
 import { Mongoose } from "mongoose";
-import gamesController from "../controllers/games/games";
+import gamesController from "../controllers/games";
 
 const startSocketServer = (server: Server, mongoose: Mongoose) => {
   const io = new socketIO.Server(server, {

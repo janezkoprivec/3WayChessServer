@@ -1,6 +1,7 @@
 import socketIO from "socket.io";
-import { Game, Player, User } from "../../models/db-models";
+import { Game, Player } from "../models/db-models";
 import { Mongoose } from "mongoose";
+import { User } from "../models/db-models";
 
 const gamesController = (io: socketIO.Server) => {
   const gamesNamespace = io.of("/games");
