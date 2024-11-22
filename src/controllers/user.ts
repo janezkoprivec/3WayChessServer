@@ -29,16 +29,24 @@ const register = async (req: Request, res: Response) => {
 
 const login = async (req: Request, res: Response) => {
   let { username, password } = req.body;
+  console.log("Login", req.body);
 
   User.findOne({ username }).then((user) => {
     if (!user) {
+      console.log("User not found");
       return res.status(401).json({ message: "Unauthorized" });
     }
 
     bcrypt.compare(password, user.password, (err: any, result: boolean) => {
-      if (err) {
-        return res.status(401).json({ message: "Unauthorized" });
+      console.log(err, result);
+      if (!result){
+        console.log("Passwords do not match 2");
+        res.status(401).json({ message: "Unauthorized" });
+      } else if (err) {
+        console.log("Error comparing passwords", err);
+        res.status(401).json({ message: "Unauthorized" });
       } else if (result) {
+        console.log("Passwords match 1", result);
         signJWT(user, (error: Error |  null, token: string | null) => {
           if (error) {
             res.status(401).json({ message: "Unauthorized", error });
@@ -46,10 +54,14 @@ const login = async (req: Request, res: Response) => {
             res.status(200).json({ message: "Authorized", token, user: { _id: user._id, username: user.username } });
           }
         });
+      } else {
+        console.log("Passwords do not match");
+        res.status(401).json({ message: "Unauthorized" });
       }
-    }); 
+    });
   }).catch((error) => {
-    return res.status(500).json({ message: error.message, error });
+    console.log(error);
+    res.status(500).json({ message: error.message, error });
   });
 };
 
