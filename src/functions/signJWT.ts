@@ -31,7 +31,6 @@ const signJWT = (
       }
     );
   } catch (error) {
-    console.log(error);
     callback(error as Error, null);
   }
 };

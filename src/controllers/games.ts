@@ -30,8 +30,6 @@ const gamesController = (io: socketIO.Server) => {
   };
 
   const handleCreate = async (socket: socketIO.Socket, data: any) => {
-    console.log("create game", data);
-
     const user = await User.findById(data.user._id);
     if (!user) {
       socket.emit("error", "User not found");

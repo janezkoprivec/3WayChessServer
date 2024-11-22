@@ -34,20 +34,15 @@ const login = async (req: Request, res: Response) => {
 
   User.findOne({ username }).then((user) => {
     if (!user) {
-      console.log("User not found");
       return res.status(401).json({ message: "Unauthorized" });
     }
 
     bcrypt.compare(password, user.password, (err: any, result: boolean) => {
-      console.log(err, result);
       if (!result){
-        console.log("Passwords do not match 2");
         res.status(401).json({ message: "Unauthorized" });
       } else if (err) {
-        console.log("Error comparing passwords", err);
         res.status(401).json({ message: "Unauthorized" });
       } else if (result) {
-        console.log("Passwords match 1", result);
         signJWT(user, (error: Error |  null, token: string | null) => {
           if (error) {
             res.status(401).json({ message: "Unauthorized", error });
@@ -56,12 +51,10 @@ const login = async (req: Request, res: Response) => {
           }
         });
       } else {
-        console.log("Passwords do not match");
         res.status(401).json({ message: "Unauthorized" });
       }
     });
   }).catch((error) => {
-    console.log(error);
     res.status(500).json({ message: error.message, error });
   });
 };
