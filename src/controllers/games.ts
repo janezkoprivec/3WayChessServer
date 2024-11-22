@@ -1,15 +1,19 @@
 import socketIO from "socket.io";
-import { Game, Player } from "../models/db-models";
-import { Mongoose } from "mongoose";
+import { Game, IGame, Player } from "../models/db-models";
 import { User } from "../models/db-models";
+import { gameController } from "./game";
 
 const gamesController = (io: socketIO.Server) => {
   const gamesNamespace = io.of("/games");
 
   gamesNamespace.on("connection", async (socket) => {
     broadcastGames(socket);
-    socket.on("create", (data) => {
-      handleCreate(socket, data);
+    socket.on("create", async (data) => {
+      const game = await handleCreate(socket, data);
+      if (game) {
+        gameController(io, game as unknown as IGame & { _id: string });
+      }
+      broadcastGames(socket);
     });
   });
 
@@ -30,26 +34,30 @@ const gamesController = (io: socketIO.Server) => {
   };
 
   const handleCreate = async (socket: socketIO.Socket, data: any) => {
-    const user = await User.findById(data.user._id);
+    const user = await User.findById(data.user.id);
     if (!user) {
       socket.emit("error", "User not found");
       return;
     }
 
     const player = await Player.create({
-      user: user._id,
+      user: user,
       color: data.selectedColor,
     });
 
     const game = await Game.create({
       name: data.gameName,
       status: "waiting",
-      players: [player._id],
+      players: [player],
       createdBy: player._id,
       timeControl: data.timeControl,
     });
 
+    socket.emit("game-created", game);
+
     broadcastGames(socket);
+
+    return game;
   };
 };
 
