@@ -13,7 +13,6 @@ const startSocketServer = (server: Server, mongoose: Mongoose) => {
   });
   
   io.on("connection", (socket) => {
-    console.log("a user connected");
   });
 
 

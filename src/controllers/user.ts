@@ -5,8 +5,6 @@ import mongoose from "mongoose";
 import signJWT from "../functions/signJWT";
 
 const validateToken = async (req: Request, res: Response) => {
-  console.log("Token validated");
-
   res.status(200).json({ message: "Authorized" });
 };
 
@@ -15,21 +13,24 @@ const register = async (req: Request, res: Response) => {
 
   bcrypt.hash(password, 10, (err: any, hash: string) => {
     if (err) {
-      return res.status(500).json({ message: err.message, error: err });
+      res.status(500).json({ message: err.message, error: err });
     }
 
     const user = new User({ email, username, password: hash });
     return user.save().then((user) => {
-      return res.status(201).json({ message: "User registered", user });
+      res.status(201).json({ message: "User registered", user });
     }).catch((error) => {
-      return res.status(500).json({ message: error.message, error });
+      if (error.code === 11000) {
+        res.status(409).json({ message: "User already exists" });
+      } else {
+        res.status(500).json({ message: error.message });
+      }
     });
   });
 };
 
 const login = async (req: Request, res: Response) => {
   let { username, password } = req.body;
-  console.log("Login", req.body);
 
   User.findOne({ username }).then((user) => {
     if (!user) {
