@@ -8,7 +8,6 @@ const onInitServer = async (io: socketIO.Server, gameUpdated: () => void) => {
     .lean();
 
   for (const game of waitingGames) {
-    console.log("onInitServer", game._id);
     gameController(io, game as unknown as IGame & { _id: string }, gameUpdated);
   }
 };
