@@ -18,9 +18,14 @@ const gamesController = (io: socketIO.Server) => {
 
   const broadcastGames = async () => {
     try {
-      const games = await Game.find({ status: "waiting" })
+      let games = await Game.find({ status: "waiting" })
         .populate('players.user', 'username email profilePictureUrl')
         .lean();
+
+      games = games.map((game) => ({
+        ...game,
+        id: game._id.toString(),
+      }));
 
       gamesNamespace.emit("waiting-games", games);
     } catch (err) {
