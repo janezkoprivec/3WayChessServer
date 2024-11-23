@@ -1,12 +1,11 @@
 import mongoose from "mongoose";
-import { Player, Game, IPlayer, User } from "./db-models";
+import { Game, User } from "./db-models";
 import dotenv from "dotenv";
 
 dotenv.config();
 
 async function seedDatabase() {
   await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/chess-game');
-  // console.log('test', mongoose.connection.readyState);
 
   setTimeout(async () => {
     try {
@@ -14,7 +13,7 @@ async function seedDatabase() {
 
       // Clear existing data
       console.log("Clearing existing data...");
-      await Promise.all([Player.deleteMany({}), Game.deleteMany({}), User.deleteMany({})]);
+      await Promise.all([Game.deleteMany({}), User.deleteMany({})]);
       console.log("Existing data cleared.");
 
       // Create test users
@@ -28,36 +27,21 @@ async function seedDatabase() {
       ]);
       console.log(`Created ${users.length} users`);
 
-      // Create players with different colors for each user
-      console.log("Creating players...");
-      const players: IPlayer[] = [];
-      for (const user of users) {
-        const whitePlr = await Player.create({
-          user: user._id,
-          color: "white",
-        });
-        const blackPlr = await Player.create({
-          user: user._id,
-          color: "black",
-        });
-        players.push(whitePlr, blackPlr);
-      }
-      console.log(`Created ${players.length} players`);
-
       // Game creation helper function
       const createGame = async (
         status: "active" | "waiting" | "finished",
         index: number
       ) => {
-        const player1Index = Math.floor(Math.random() * players.length);
-        let player2Index;
+        const user1Index = Math.floor(Math.random() * users.length);
+        let user2Index;
         do {
-          player2Index = Math.floor(Math.random() * players.length);
-        } while (
-          player2Index === player1Index ||
-          players[player1Index].user.toString() ===
-            players[player2Index].user.toString()
-        );
+          user2Index = Math.floor(Math.random() * users.length);
+        } while (user2Index === user1Index);
+
+        // Randomly assign colors
+        const isFirstPlayerWhite = Math.random() < 0.5;
+        const whitePlayerId = isFirstPlayerWhite ? users[user1Index]._id : users[user2Index]._id;
+        const blackPlayerId = isFirstPlayerWhite ? users[user2Index]._id : users[user1Index]._id;
 
         const timeControls = [
           { type: "bullet", time: 3, increment: 0 },
@@ -71,8 +55,9 @@ async function seedDatabase() {
         const game = await Game.create({
           name: `Game ${index + 1}`,
           status,
-          players: [players[player1Index]._id, players[player2Index]._id],
-          createdBy: players[player1Index]._id,
+          whitePlayer: whitePlayerId,
+          blackPlayer: blackPlayerId,
+          createdBy: users[user1Index]._id,
           timeControl: randomTimeControl,
         });
 
@@ -103,19 +88,18 @@ async function seedDatabase() {
       // Log final counts
       const finalCounts = await Promise.all([
         User.countDocuments(),
-        Player.countDocuments(),
         Game.countDocuments(),
       ]);
 
       console.log("Final database counts:", {
         users: finalCounts[0],
-        players: finalCounts[1],
-        games: finalCounts[2],
+        games: finalCounts[1],
       });
     } catch (error) {
       console.error("Error seeding database:", error);
-      throw error; // Re-throw the error to ensure it's not silently caught
+      throw error;
     }
   }, 3000);
 }
+
 seedDatabase();

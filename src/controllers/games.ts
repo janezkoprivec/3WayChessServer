@@ -1,37 +1,48 @@
 import socketIO from "socket.io";
-import { Game, IGame, Player } from "../models/db-models";
-import { User } from "../models/db-models";
+import { Game, IGame, User } from "../models/db-models";
 import { gameController } from "./game";
+
+const onInitServer = async (io: socketIO.Server, gameUpdated: () => void) => {
+  const waitingGames = await Game.find({ status: "waiting" })
+    .populate('players.user', 'username email profilePictureUrl')
+    .lean();
+
+  for (const game of waitingGames) {
+    console.log("onInitServer", game._id);
+    gameController(io, game as unknown as IGame & { _id: string }, gameUpdated);
+  }
+};
 
 const gamesController = (io: socketIO.Server) => {
   const gamesNamespace = io.of("/games");
 
+
+  const broadcastGames = async () => {
+    try {
+      const games = await Game.find({ status: "waiting" })
+        .populate('players.user', 'username email profilePictureUrl')
+        .lean();
+
+      gamesNamespace.emit("waiting-games", games);
+    } catch (err) {
+      console.error("Error fetching games:", err);
+      gamesNamespace.emit("error", "Failed to fetch games");
+    }
+  };
+  
+  onInitServer(io, broadcastGames);
+
+
   gamesNamespace.on("connection", async (socket) => {
-    broadcastGames(socket);
+    broadcastGames();
     socket.on("create", async (data) => {
       const game = await handleCreate(socket, data);
       if (game) {
-        gameController(io, game as unknown as IGame & { _id: string });
+        gameController(io, game as unknown as IGame & { _id: string }, broadcastGames);
       }
-      broadcastGames(socket);
+      broadcastGames();
     });
   });
-
-  const broadcastGames = async (socket: socketIO.Socket) => {
-    try {
-      const games = await Game.find({ status: "waiting" }).populate({
-        path: "players",
-        populate: {
-          path: "user",
-        },
-      });
-
-      socket.emit("waiting-games", games);
-    } catch (err) {
-      console.error("Error fetching games:", err);
-      socket.emit("error", "Failed to fetch games");
-    }
-  };
 
   const handleCreate = async (socket: socketIO.Socket, data: any) => {
     const user = await User.findById(data.user.id);
@@ -40,22 +51,22 @@ const gamesController = (io: socketIO.Server) => {
       return;
     }
 
-    const player = await Player.create({
-      user: user,
-      color: data.selectedColor,
-    });
+
 
     const game = await Game.create({
       name: data.gameName,
       status: "waiting",
-      players: [player],
-      createdBy: player._id,
+      players: [{
+        user: user._id,
+        color: data.selectedColor,
+      }],
+      createdBy: user._id,
       timeControl: data.timeControl,
     });
 
     socket.emit("game-created", game);
 
-    broadcastGames(socket);
+    broadcastGames();
 
     return game;
   };

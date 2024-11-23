@@ -1,17 +1,34 @@
 import { Schema } from "mongoose";
-import { IPlayer } from "./player";
+import { IUser, IUserLean } from "./user";
+
+export interface IGameTimeControl {
+  type: "rapid" | "blitz" | "bullet";
+  time: number;
+  increment: number;
+}
 
 export interface IGame extends Document {
+  _id: string;
+  name: string;
+  status: "active" | "waiting" | "finished";
+  players: [{
+    user: IUserLean;
+    color: string;
+  }];
+  createdBy: IUserLean;
+  timeControl: IGameTimeControl;
+}
+
+export interface IGameLean {
   id: string;
   name: string;
   status: "active" | "waiting" | "finished";
-  players: IPlayer[];
-  createdBy: IPlayer;
-  timeControl: {
-    type: "rapid" | "blitz" | "bullet";
-    time: number;
-    increment: number;
-  };
+  players: [{
+    user: IUserLean;
+    color: string;
+  }];
+  createdBy: IUserLean;
+  timeControl: IGameTimeControl;
 }
 
 // Game Schema
@@ -24,12 +41,15 @@ export const GameSchema = new Schema({
     default: "waiting"
   },
   players: [{
-    type: Schema.Types.ObjectId,
-    ref: 'Player'
+    user: {
+      type: Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    color: { type: String, required: true }
   }],
   createdBy: {
     type: Schema.Types.ObjectId,
-    ref: 'Player',
+    ref: 'User',
     required: true
   },
   timeControl: {
