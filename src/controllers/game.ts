@@ -59,6 +59,10 @@ export const gameController = (
       gameNamespace.emit("game-updated", currentGame);
       gameUpdated();
     });
+
+    socket.on("move", async (data) => {
+      gameNamespace.emit("move", data);
+    });
   });
 
   const handlePlayerJoin = async (userId: string, color: string) => {
