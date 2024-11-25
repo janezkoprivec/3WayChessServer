@@ -3,44 +3,66 @@ import dotenv from "dotenv";
 import cors from "cors";
 import startSocketServer from "./routes/sockets";
 import initMongoose from "./models/db";
-import config from "./config/config";
-import mongoose, { ConnectOptions } from "mongoose";
 import bodyParser from "body-parser";
 import authRouter from "./routes/auth";
+import { errorHandler } from "./middleware/errorHandler";
+
+const app: Express = express();
+
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  // Keep the process alive but log the error
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  // Keep the process alive but log the error
+});
 
 async function main() {
-  // Load environment variables first
-  dotenv.config();
+  try {
+    console.log('Starting server initialization...');
+    
+    // Initialize MongoDB connection
+    console.log('Connecting to MongoDB...');
+    const mongoose = await initMongoose();
+    console.log('MongoDB connection established');
 
-  // Then initialize database
+    // Middleware
+    app.use(cors({ origin: "*" }));
+    app.use(bodyParser.json());
+    
+    const port = process.env.PORT || 3000;
 
-  const mongoose = await initMongoose();
+    // Routes
+    app.use("/auth", authRouter);
+    app.use(errorHandler);
+    
+    app.get("/", (req: Request, res: Response) => {
+      res.send("Express + TypeScript Server");
+    });
 
+    app.get("/health", (req: Request, res: Response) => {
+      res.status(200).send("OK");
+    });
 
-  // require("./models/db-models");
+    // Start server
+    const server = app.listen(port, () => {
+      console.log(`[server]: Server is running at http://localhost:${port}`);
+    });
 
-  // mongoose.connect(config.mongo.url); 
+    // Initialize socket server
+    startSocketServer(server, mongoose);
 
-  const app: Express = express();
-  app.use(
-    cors({
-      origin: "*",
-    })
-  );
-  app.use(bodyParser.json());
-  const port = process.env.PORT || 3000;
-
-  const server = app.listen(port, () => {
-    console.log(`[server]: Server is running at http://localhost:${port}`);
-  });
-
-  app.use("/auth", authRouter);
-
-  startSocketServer(server, mongoose);
-
-  app.get("/", (req: Request, res: Response) => {
-    res.send("Express + TypeScript Server");
-  });
+    console.log('Server initialization complete');
+  } catch (error) {
+    console.error('Server initialization failed:', error);
+    // Don't exit, just log the error
+    throw error;
+  }
 }
 
-main();
+main().catch((error) => {
+  console.error('Fatal error:', error);
+  // Don't exit, just log the error
+});

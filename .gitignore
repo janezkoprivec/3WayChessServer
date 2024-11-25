@@ -1,4 +1,12 @@
 .env
+.env-docker
 
 node_modules
 dist
+
+# Docker
+.docker
+docker-compose.override.yml
+
+# MongoDB data
+mongodb_data/

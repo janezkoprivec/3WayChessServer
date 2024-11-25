@@ -12,9 +12,17 @@ Run a development server:
 npm run dev
 ```
 
-Build the project and run a production server:
+Run a production server:
+
+Make sure to configure the .env-docker file.
 
 ```bash
-npm run build
-npm run start
+docker compose up --build
+```
+**NOTE:** Current version uses a local MongoDB instance, make sure to replace localhost with mongodb in the .env-docker file.
+
+Stop a production server:
+
+```bash
+docker compose down
 ```
