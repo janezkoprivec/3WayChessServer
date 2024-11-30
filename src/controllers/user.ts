@@ -23,6 +23,7 @@ const register = async (req: Request, res: Response) => {
         if (error.code === 11000) {
           res.status(409).json({ message: "User already exists" });
         } else {
+          console.error(error);
           res.status(500).json({ message: error.message });
         }
       }
@@ -69,6 +70,7 @@ const login = async (req: Request, res: Response) => {
       });
     })
     .catch((error) => {
+      console.error(error);
       res.status(500).json({ message: error.message, error });
     });
 };
