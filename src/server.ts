@@ -32,7 +32,8 @@ async function main() {
     app.use(cors({ origin: "*" }));
     app.use(bodyParser.json());
     
-    const port = process.env.PORT || 3000;
+    const port = Number(process.env.PORT) || 3000;
+    const host = '0.0.0.0';
 
     // Routes
     app.use("/auth", authRouter);
@@ -47,8 +48,8 @@ async function main() {
     });
 
     // Start server
-    const server = app.listen(port, () => {
-      console.log(`[server]: Server is running at http://localhost:${port}`);
+    const server = app.listen(port, host, () => {
+      console.log(`[server]: Server is running at http://${host}:${port}`);
     });
 
     // Initialize socket server
