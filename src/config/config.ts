@@ -15,14 +15,18 @@ const MONGO_OPTIONS = {
 
 const MONGO_USERNAME = process.env.MONGO_USERNAME || "";
 const MONGO_PASSWORD = process.env.MONGO_PASSWORD || "";
-const MONGO_HOST = process.env.MONGO_HOST || "mongodb://127.0.0.1:27017/3waychess";
+const MONGO_HOST = process.env.MONGO_HOST || "127.0.0.1:27017";
+const MONGO_DATABASE = process.env.MONGO_DATABASE || "3waychess";
 
 const MONGO = {
   hostname: MONGO_HOST,
   options: MONGO_OPTIONS,
   username: MONGO_USERNAME,
   password: MONGO_PASSWORD,
-  url: MONGO_USERNAME && MONGO_PASSWORD ? `mongodb://${MONGO_USERNAME}:${MONGO_PASSWORD}@${MONGO_HOST}` : `mongodb://${MONGO_HOST}`,
+  database: MONGO_DATABASE,
+  url: MONGO_USERNAME && MONGO_PASSWORD 
+    ? `mongodb://${MONGO_USERNAME}:${MONGO_PASSWORD}@${MONGO_HOST}/${MONGO_DATABASE}` 
+    : `mongodb://${MONGO_HOST}/${MONGO_DATABASE}`,
 };
 
 export default {

@@ -1,10 +1,11 @@
 import socketIO from "socket.io";
-import { Game, IGame, User } from "../models/db-models";
+import { Game, IGame, User, Move } from "../models/db-models";
 import { gameController } from "./game";
 
 const onInitServer = async (io: socketIO.Server, gameUpdated: () => void) => {
   const waitingGames = await Game.find({ status: "waiting" })
     .populate('players.user', 'username email profilePictureUrl')
+    .populate('createdBy', 'username email profilePictureUrl')
     .lean();
 
   for (const game of waitingGames) {
@@ -20,6 +21,7 @@ const gamesController = (io: socketIO.Server) => {
     try {
       let games = await Game.find({ status: "waiting" })
         .populate('players.user', 'username email profilePictureUrl')
+        .populate('createdBy', 'username email profilePictureUrl')
         .lean();
 
       games = games.map((game) => ({
@@ -67,6 +69,7 @@ const gamesController = (io: socketIO.Server) => {
       createdBy: user._id,
       timeControl: data.timeControl,
     });
+
 
     socket.emit("game-created", game);
 

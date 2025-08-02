@@ -8,5 +8,6 @@ authRouter.get("/validate", extractJWT, userController.validateToken);
 authRouter.post("/register", userController.register);
 authRouter.post("/login", userController.login);
 authRouter.get("/all", userController.getAllUsers);
+authRouter.get("/me", extractJWT, userController.getMe);
 
 export default authRouter;

@@ -15,6 +15,7 @@ const signJWT = (
     jwt.sign(
       {
         username: user.username,
+        userId: user._id,
       },
       config.server.token.secret,
       {

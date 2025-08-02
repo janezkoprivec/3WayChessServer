@@ -1,17 +1,18 @@
 import mongoose from "mongoose";
-import dotenv from "dotenv";
-
-dotenv.config();
+import config from "../config/config";
 
 async function initMongoose() {
   console.log('Initializing MongoDB connection...');
   
-  if (!process.env.MONGO_URI) {
-    console.error('MONGO_URI is not defined in environment variables');
-    throw new Error("MONGO_URI is not defined");
+  const mongoUri = config.mongo.url;
+  
+  if (!mongoUri) {
+    console.error('MongoDB URI is not properly configured');
+    throw new Error("MongoDB URI is not properly configured");
   }
   
   console.log('Attempting to connect to MongoDB...');
+  console.log(`Connection string: ${mongoUri.replace(/\/\/.*@/, '//***:***@')}`); // Hide credentials in logs
   
   mongoose.connection.on('connecting', () => {
     console.log('Connecting to MongoDB...');
@@ -30,7 +31,7 @@ async function initMongoose() {
   });
 
   try {
-    await mongoose.connect(process.env.MONGO_URI, {
+    await mongoose.connect(mongoUri, {
       serverSelectionTimeoutMS: 5000,
       heartbeatFrequencyMS: 2000,
     });

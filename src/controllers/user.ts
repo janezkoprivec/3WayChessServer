@@ -87,9 +87,30 @@ const getAllUsers = async (req: Request, res: Response) => {
     });
 };
 
+const getMe = async (req: Request, res: Response) => {
+  try {
+    const userId = res.locals.jwt.userId;
+
+    console.log(userId);
+    
+    const user = await User.findById(userId).select("-password");
+    
+    if (!user) {
+      res.status(404).json({ message: "User not found" });
+      return;
+    }
+    
+    res.status(200).json({ user });
+  } catch (error: any) {
+    console.error(error);
+    res.status(500).json({ message: error.message, error });
+  }
+};
+
 export default {
   validateToken,
   register,
   login,
   getAllUsers,
+  getMe,
 };
