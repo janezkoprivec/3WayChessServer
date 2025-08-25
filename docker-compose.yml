@@ -6,7 +6,7 @@ services:
     ports:
       - "${PORT:-3000}:3000"
     env_file:
-      - .env-docker
+      - .env
     environment:
       - NODE_OPTIONS="--max-old-space-size=2048"
       - NODE_ENV=production
