@@ -5,6 +5,7 @@ import startSocketServer from "./routes/sockets";
 import initMongoose from "./models/db";
 import bodyParser from "body-parser";
 import authRouter from "./routes/auth";
+import historyRouter from "./routes/history";
 import { errorHandler } from "./middleware/errorHandler";
 
 const app: Express = express();
@@ -37,6 +38,7 @@ async function main() {
 
     // Routes
     app.use("/auth", authRouter);
+    app.use("/history", historyRouter);
     app.use(errorHandler);
     
     app.get("/", (req: Request, res: Response) => {

@@ -9,5 +9,6 @@ authRouter.post("/register", userController.register);
 authRouter.post("/login", userController.login);
 authRouter.get("/all", userController.getAllUsers);
 authRouter.get("/me", extractJWT, userController.getMe);
+authRouter.put("/profile-picture", extractJWT, userController.updateProfilePicture);
 
 export default authRouter;

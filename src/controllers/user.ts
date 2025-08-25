@@ -90,8 +90,6 @@ const getAllUsers = async (req: Request, res: Response) => {
 const getMe = async (req: Request, res: Response) => {
   try {
     const userId = res.locals.jwt.userId;
-
-    console.log(userId);
     
     const user = await User.findById(userId).select("-password");
     
@@ -107,10 +105,49 @@ const getMe = async (req: Request, res: Response) => {
   }
 };
 
+const updateProfilePicture = async (req: Request, res: Response) => {
+  try {
+    const userId = res.locals.jwt.userId;
+    const { profilePictureUrl } = req.body;
+    
+    if (!profilePictureUrl) {
+      res.status(400).json({ message: "Profile picture URL is required" });
+      return;
+    }
+    
+    try {
+      new URL(profilePictureUrl);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid URL format" });
+      return;
+    }
+    
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { profilePictureUrl },
+      { new: true, runValidators: true }
+    ).select("-password");
+    
+    if (!user) {
+      res.status(404).json({ message: "User not found" });
+      return;
+    }
+    
+    res.status(200).json({ 
+      message: "Profile picture updated successfully", 
+      user 
+    });
+  } catch (error: any) {
+    console.error(error);
+    res.status(500).json({ message: error.message, error });
+  }
+};
+
 export default {
   validateToken,
   register,
   login,
   getAllUsers,
   getMe,
+  updateProfilePicture,
 };
