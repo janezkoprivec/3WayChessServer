@@ -11,6 +11,7 @@ services:
       - NODE_OPTIONS="--max-old-space-size=2048"
       - NODE_ENV=production
       - FORCE_COLOR=1
+      - MONGO_HOST=mongodb:27017
     depends_on:
       mongodb:
         condition: service_healthy
