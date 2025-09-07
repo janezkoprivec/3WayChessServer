@@ -4,6 +4,7 @@ import { Game } from "../models/db-models";
 import { IUserLean } from "../models/db-models/user";
 import { IGameLean } from "../models/db-models/game";
 import { MoveType, Piece, Color } from "../models/db-models/move";
+import { Game as ChessGame, GameState, Color as WasmColor, Move as WasmMove, Coordinates } from "main-chess-lib";
 
 export const gameController = (
   io: socketIO.Server,
@@ -11,12 +12,51 @@ export const gameController = (
   gameUpdated: () => void
 ) => {
   let currentGame: IGameLean | null = null;
+  let chessGame: ChessGame | null = null;
   let currentTurn: string | null = null;
   let playerTimes: Map<string, number> = new Map();
   let lastMoveTime: Date | null = null;
 
   const gameNamespace = io.of(`/games/${game._id}`);
   const gameId = game._id;
+
+  const colorStringToWasm = (colorStr: string): WasmColor => {
+    switch (colorStr.toLowerCase()) {
+      case 'white': return WasmColor.White;
+      case 'grey': return WasmColor.Gray;
+      case 'black': return WasmColor.Black;
+      default: return WasmColor.White;
+    }
+  };
+
+  const wasmColorToString = (wasmColor: WasmColor): string => {
+    switch (wasmColor) {
+      case WasmColor.White: return 'white';
+      case WasmColor.Gray: return 'grey';
+      case WasmColor.Black: return 'black';
+      default: return 'white';
+    }
+  };
+
+  const initializeChessGame = async () => {
+    try {
+      if (currentGame?.fen) {
+        chessGame = ChessGame.new(currentGame.fen);
+      } else {
+        chessGame = ChessGame.newDefault();
+        
+        const initialFen = chessGame.getFen();
+        await Game.findByIdAndUpdate(gameId, { fen: initialFen });
+        
+        if (currentGame) {
+          currentGame.fen = initialFen;
+        }
+      }
+    } catch (error) {
+      console.error('Error initializing WASM game:', error);
+      chessGame = ChessGame.newDefault();
+    }
+  };
 
   const updateCurrentGame = async (id?: string) => {
     let updatedGame = await Game.findById(id ?? currentGame?.id)
@@ -39,7 +79,10 @@ export const gameController = (
           color: player.color,
         })) as [{ user: IUserLean; color: string }],
         timeControl: updatedGame.timeControl,
+        fen: updatedGame.fen,
       };
+      
+      await initializeChessGame();
     }
   };
 
@@ -64,6 +107,8 @@ export const gameController = (
       } else if (currentGame?.status === "active") {
         const initialTime = currentGame.timeControl.time;
         playerTimes.set(data.player.color, initialTime);
+        
+        syncTurnWithGameState();
         
         socket.emit("turn-updated", {
           currentTurn,
@@ -153,7 +198,7 @@ export const gameController = (
     if (updatedGame) {
       await updateCurrentGame();
       if (currentGame && currentGame.players.length > 0) {
-        currentTurn = currentGame.players[0].color;
+        syncTurnWithGameState();
         lastMoveTime = new Date();
         
         console.log("Initializing player times", currentGame.timeControl.time);
@@ -177,13 +222,23 @@ export const gameController = (
     return lastMove ? Number(lastMove.moveNumber) + 1 : 1;
   };
 
-  const getNextTurn = (currentColor: string): string => {
-    if (!currentGame || currentGame.players.length <= 0) return currentColor;
+  const getCurrentTurnFromGameState = (): string | null => {
+    if (!chessGame) return null;
     
-    const colors = currentGame.players.map(player => player.color);
-    const currentIndex = colors.indexOf(currentColor);
-    const nextIndex = (currentIndex + 1) % colors.length;
-    return colors[nextIndex] || currentColor;
+    try {
+      const gameState = chessGame.getGameState();
+      return wasmColorToString(gameState.turn);
+    } catch (error) {
+      console.error('Error getting game state:', error);
+      return null;
+    }
+  };
+
+  const syncTurnWithGameState = () => {
+    const gameTurn = getCurrentTurnFromGameState();
+    if (gameTurn && gameTurn !== currentTurn) {
+      currentTurn = gameTurn;
+    }
   };
 
   const updatePlayerTime = (playerColor: string, elapsedSeconds: number) => {
@@ -197,8 +252,55 @@ export const gameController = (
   const getElapsedTime = (): number => {
     if (!lastMoveTime) return 0;
     const elapsed = Math.floor((Date.now() - lastMoveTime.getTime()) / 1000);
-    console.log(`Elapsed time since last move: ${elapsed}s`);
     return elapsed;
+  };
+
+  const validateMove = (moveData: {
+    from: { i: number; q: number; r: number; s: number };
+    to: { i: number; q: number; r: number; s: number };
+    move_type: MoveType;
+    color: Color;
+    piece: Piece;
+  }): { isValid: boolean; validMoves?: WasmMove[]; error?: string } => {
+    if (!chessGame) {
+      return { isValid: false, error: 'Chess game not initialized' };
+    }
+
+    try {
+      const gameState = chessGame.getGameState();
+      const expectedColor = colorStringToWasm(wasmColorToString(gameState.turn));
+      if (moveData.color !== expectedColor) {
+        return { 
+          isValid: false, 
+          error: `Not ${wasmColorToString(moveData.color)}'s turn` 
+        };
+      }
+
+      const allValidMoves = chessGame.queryAllMoves();
+      const validMovesFromPosition = allValidMoves.filter(move =>
+        move.from.i === moveData.from.i &&
+        move.from.q === moveData.from.q &&
+        move.from.r === moveData.from.r &&
+        move.from.s === moveData.from.s
+      );
+      
+      const moveExists = validMovesFromPosition.some(validMove => 
+        validMove.to.i === moveData.to.i &&
+        validMove.to.q === moveData.to.q &&
+        validMove.to.r === moveData.to.r &&
+        validMove.to.s === moveData.to.s &&
+        validMove.move_type === moveData.move_type
+      );
+
+      return { 
+        isValid: moveExists, 
+        validMoves: validMovesFromPosition,
+        error: moveExists ? undefined : 'Invalid move' 
+      };
+    } catch (error) {
+      console.error('Error validating move:', error);
+      return { isValid: false, error: 'Move validation failed' };
+    }
   };
 
   const saveMove = async (moveData: {
@@ -209,6 +311,11 @@ export const gameController = (
     piece: Piece;
   }) => {
     try {
+      const validation = validateMove(moveData);
+      if (!validation.isValid) {
+        throw new Error(validation.error || 'Invalid move');
+      }
+
       const moveNumber = await getNextMoveNumber(gameId);
       
       const move = new Move({
@@ -224,12 +331,51 @@ export const gameController = (
 
       await move.save();
       
+      if (chessGame && validation.validMoves) {
+        const wasmMove = validation.validMoves.find(validMove => 
+          validMove.to.i === moveData.to.i &&
+          validMove.to.q === moveData.to.q &&
+          validMove.to.r === moveData.to.r &&
+          validMove.to.s === moveData.to.s &&
+          validMove.move_type === moveData.move_type
+        );
+        
+        if (wasmMove) {
+          chessGame.commitMove(wasmMove, null, true);
+        } else {
+          throw new Error('Could not find matching WASM move object');
+        }
+        
+        const updatedFen = chessGame.getFen();
+        await Game.findByIdAndUpdate(gameId, { fen: updatedFen });
+        if (currentGame) {
+          currentGame.fen = updatedFen;
+        }
+
+        syncTurnWithGameState();
+
+        const gameState = chessGame.getGameState();
+        if (gameState.won !== null && gameState.won !== undefined) {
+          console.log('Game won by:', wasmColorToString(gameState.won));
+          await Game.findByIdAndUpdate(gameId, { status: 'finished' });
+          gameNamespace.emit("game-ended", { 
+            winner: wasmColorToString(gameState.won),
+            reason: 'checkmate'
+          });
+        } else if (gameState.is_stalemate) {
+          console.log('Game ended in stalemate');
+          await Game.findByIdAndUpdate(gameId, { status: 'finished' });
+          gameNamespace.emit("game-ended", { 
+            winner: null,
+            reason: 'stalemate'
+          });
+        }
+      }
+      
       if (currentTurn) {
         const elapsedSeconds = getElapsedTime();
-        console.log(`Player ${currentTurn} made a move after ${elapsedSeconds}s`);
         updatePlayerTime(currentTurn, elapsedSeconds);
         
-        currentTurn = getNextTurn(currentTurn);
         lastMoveTime = new Date();
         
         gameNamespace.emit("turn-updated", { 

@@ -17,6 +17,7 @@ export interface IGame extends Document {
   }];
   createdBy: IUserLean;
   timeControl: IGameTimeControl;
+  fen?: string; 
 }
 
 export interface IGameLean {
@@ -29,6 +30,7 @@ export interface IGameLean {
   }];
   createdBy: IUserLean;
   timeControl: IGameTimeControl;
+  fen?: string; 
 }
 
 // Game Schema
@@ -68,6 +70,10 @@ export const GameSchema = new Schema({
       required: true,
       min: 0
     }
+  },
+  fen: {
+    type: String,
+    required: false
   }
 }, {
   timestamps: true

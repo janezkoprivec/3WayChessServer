@@ -1,0 +1,16 @@
+{
+  "name": "tri-hex-chess",
+  "description": "Core logic for tri-hex-chess",
+  "version": "0.1.3",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/janvasiljevic/tri-hex-chess-core"
+  },
+  "files": [
+    "tri-hex-chess_bg.wasm",
+    "tri-hex-chess.js",
+    "tri-hex-chess.d.ts"
+  ],
+  "main": "tri-hex-chess.js",
+  "types": "tri-hex-chess.d.ts"
+}
